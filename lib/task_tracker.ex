@@ -9,22 +9,30 @@ defmodule TaskTracker do
       IO.puts("Invalid name")
     end
 
+    IO.puts("-----------------------------")
     IO.puts("Hello #{name}, what would you like to do?")
     IO.puts("1. Add a task: add 'task'")
     IO.puts("2. List tasks: list 'todo' or 'done' or 'in-progress'")
     IO.puts("3. Update a task: update 'task_id'")
     IO.puts("4. Exit: exit app")
     IO.puts("-----------------------------")
-    input = IO.gets("")
+    input = IO.gets("") |> String.trim()
 
-    [choice | task] = String.split(input, " ")
+    case String.split(input, " ") do
+      ["add" | task] ->
+        add_task(Enum.join(task, " "))
 
-    case choice do
-      "add" -> add_task(Enum.join(task, " "))
-      # ["list", list_choice] -> list_tasks(list_choice)
-      "update" -> update_task("")
-      "exit" -> IO.puts("Goodbye")
-      _ -> IO.puts("Invalid choice")
+      ["list" | list_choice] ->
+        list_tasks(list_choice)
+
+      ["update", task_id | new_description] ->
+        update_task(task_id, Enum.join(new_description, " "))
+
+      ["exit" | _] ->
+        IO.puts("Goodbye")
+
+      _ ->
+        IO.puts("Invalid choice")
     end
   end
 
@@ -43,8 +51,33 @@ defmodule TaskTracker do
     IO.puts("Task added successfully with id: #{generated_id}")
   end
 
-  defp update_task(task_id) do
+  defp update_task(task_id, description) do
+    tasks = read_tasks()
     IO.puts("Updating task with id: #{task_id}")
+
+    task_selected = Enum.find(tasks, fn task -> task["id"] === String.to_integer(task_id) end)
+
+    if task_selected !== nil do
+      updated_tasks =
+        Enum.map(tasks, fn task ->
+          if task["id"] === String.to_integer(task_id) do
+            Map.put(task, "description", description)
+          else
+            task
+          end
+        end)
+
+      write_tasks(updated_tasks)
+    end
+
+    if task_selected == nil, do: IO.puts("Task not found")
+  end
+
+  defp read_tasks do
+    case File.read("./records.json") do
+      {:ok, body} -> Jason.decode!(body)
+      {:error, _error} -> []
+    end
   end
 
   defp store_task(task) do
@@ -70,11 +103,9 @@ defmodule TaskTracker do
 
   defp list_tasks(list_choice) do
     IO.puts("Listing tasks")
+    tasks = read_tasks()
 
-    case File.read("./records.json") do
-      {:ok, body} -> IO.inspect(body)
-      {:error, _error} -> IO.puts("No tasks found")
-    end
+    Enum.filter(tasks, fn task -> task["status"] === list_choice end)
   end
 
   defp generate_id do
