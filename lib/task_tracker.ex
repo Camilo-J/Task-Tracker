@@ -1,7 +1,5 @@
 defmodule TaskTracker do
   def main do
-    available_list_choices = ["todo", "done", "in-progress"]
-
     IO.puts("Welcome to Task Tracker")
     name = IO.gets("Please enter your name: ") |> String.trim()
 
@@ -14,6 +12,7 @@ defmodule TaskTracker do
     IO.puts("1. Add a task: add 'task'")
     IO.puts("2. List tasks: list 'todo' or 'done' or 'in-progress'")
     IO.puts("3. Update a task: update 'task_id'")
+    IO.puts("4. Delete a task: delete 'task_id'")
     IO.puts("4. Exit: exit app")
     IO.puts("-----------------------------")
     input = IO.gets("") |> String.trim()
@@ -22,17 +21,32 @@ defmodule TaskTracker do
       ["add" | task] ->
         add_task(Enum.join(task, " "))
 
-      ["list" | list_choice] ->
+      ["list", list_choice] ->
         list_tasks(list_choice)
 
       ["update", task_id | new_description] ->
         update_task(task_id, Enum.join(new_description, " "))
+
+      ["delete", task_id] ->
+        delete_task(task_id)
 
       ["exit" | _] ->
         IO.puts("Goodbye")
 
       _ ->
         IO.puts("Invalid choice")
+    end
+  end
+
+  defp list_tasks(list_choice) do
+    available_list_choices = ["todo", "done", "in-progress"]
+    tasks = read_tasks()
+
+    if Enum.find(available_list_choices, fn x -> x == list_choice end) do
+      IO.puts("Listing tasks with status: #{list_choice}")
+      Enum.filter(tasks, fn task -> task["status"] == list_choice end)
+    else
+      IO.puts("Invalid list choice")
     end
   end
 
@@ -62,6 +76,7 @@ defmodule TaskTracker do
         Enum.map(tasks, fn task ->
           if task["id"] === String.to_integer(task_id) do
             Map.put(task, "description", description)
+            Map.put(task, "updated_at", DateTime.utc_now())
           else
             task
           end
@@ -71,6 +86,15 @@ defmodule TaskTracker do
     end
 
     if task_selected == nil, do: IO.puts("Task not found")
+    :ok
+  end
+
+  defp delete_task(task_id) do
+    tasks = read_tasks()
+    IO.puts("Deleting task with id: #{task_id}")
+
+    updated_tasks = Enum.reject(tasks, fn task -> task["id"] === String.to_integer(task_id) end)
+    write_tasks(updated_tasks)
   end
 
   defp read_tasks do
@@ -99,13 +123,6 @@ defmodule TaskTracker do
       :ok -> IO.puts("")
       {:error, reason} -> IO.puts("Error storing task: #{inspect(reason)}")
     end
-  end
-
-  defp list_tasks(list_choice) do
-    IO.puts("Listing tasks")
-    tasks = read_tasks()
-
-    Enum.filter(tasks, fn task -> task["status"] === list_choice end)
   end
 
   defp generate_id do
