@@ -3,9 +3,7 @@ defmodule TaskTracker do
     IO.puts("Welcome to Task Tracker")
     name = IO.gets("Please enter your name: ") |> String.trim()
 
-    if name == "" do
-      IO.puts("Invalid name")
-    end
+    if name == "", do: IO.puts("Invalid name")
 
     IO.puts("-----------------------------")
     IO.puts("Hello #{name}, what would you like to do?")
@@ -29,6 +27,12 @@ defmodule TaskTracker do
 
       ["delete", task_id] ->
         delete_task(task_id)
+
+      ["mark-in-progress", task_id] ->
+        update_task_status(task_id, "in-progress")
+
+      ["mark-done", task_id] ->
+        update_task_status(task_id, "done")
 
       ["exit" | _] ->
         IO.puts("Goodbye")
@@ -61,17 +65,20 @@ defmodule TaskTracker do
       "updated_at" => DateTime.utc_now()
     }
 
-    store_task(new_task)
-    IO.puts("Task added successfully with id: #{generated_id}")
+    is_task_created = store_task(new_task)
+
+    if is_task_created, do: IO.puts("Task added successfully with id: #{generated_id}")
+    if is_task_created == nil, do: nil
   end
 
   defp update_task(task_id, description) do
     tasks = read_tasks()
-    IO.puts("Updating task with id: #{task_id}")
 
-    task_selected = Enum.find(tasks, fn task -> task["id"] === String.to_integer(task_id) end)
+    task_found = Enum.find(tasks, fn task -> task["id"] === String.to_integer(task_id) end)
 
-    if task_selected !== nil do
+    if task_found !== nil do
+      IO.puts("Updating task with id: #{task_id}")
+
       updated_tasks =
         Enum.map(tasks, fn task ->
           if task["id"] === String.to_integer(task_id) do
@@ -85,16 +92,48 @@ defmodule TaskTracker do
       write_tasks(updated_tasks)
     end
 
-    if task_selected == nil, do: IO.puts("Task not found")
-    :ok
+    if task_found == nil do
+      IO.puts("Task not found")
+      nil
+    end
   end
 
   defp delete_task(task_id) do
     tasks = read_tasks()
-    IO.puts("Deleting task with id: #{task_id}")
 
-    updated_tasks = Enum.reject(tasks, fn task -> task["id"] === String.to_integer(task_id) end)
-    write_tasks(updated_tasks)
+    task_selected = Enum.find(tasks, fn task -> task["id"] === String.to_integer(task_id) end)
+
+    if task_selected == nil, do: IO.puts("Task not found")
+
+    if task_selected !== nil do
+      IO.puts("Deleting task with id: #{task_id}")
+      updated_tasks = Enum.reject(tasks, fn task -> task["id"] === String.to_integer(task_id) end)
+      write_tasks(updated_tasks)
+    end
+  end
+
+  defp update_task_status(task_id, status) do
+    tasks = read_tasks()
+    IO.puts("Updating task with id: #{task_id}")
+
+    task_selected = Enum.find(tasks, fn task -> task["id"] === String.to_integer(task_id) end)
+
+    if task_selected !== nil do
+      updated_tasks =
+        Enum.map(tasks, fn task ->
+          if task["id"] === String.to_integer(task_id) do
+            Map.put(task, "status", status)
+            Map.put(task, "updated_at", DateTime.utc_now())
+          else
+            task
+          end
+        end)
+
+      write_tasks(updated_tasks)
+    end
+
+    if task_selected == nil, do: IO.puts("Task not found")
+    :ok
   end
 
   defp read_tasks do
@@ -120,8 +159,13 @@ defmodule TaskTracker do
     result = File.write("./records.json", Jason.encode!(tasks), [:write])
 
     case result do
-      :ok -> IO.puts("")
-      {:error, reason} -> IO.puts("Error storing task: #{inspect(reason)}")
+      :ok ->
+        IO.puts("")
+        :ok
+
+      {:error, reason} ->
+        IO.puts("Error storing task: #{inspect(reason)}")
+        nil
     end
   end
 
