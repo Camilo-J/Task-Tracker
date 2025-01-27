@@ -15,39 +15,46 @@ defmodule TaskTracker do
     choose_menu_option(name, false)
   end
 
-  defp list_tasks(list_choice) do
+  def list_tasks(list_choice) do
     available_list_choices = ["todo", "done", "in-progress"]
     tasks = read_tasks()
-    choice_selected = Enum.find(available_list_choices, fn x -> x == list_choice end)
-
-    if choice_selected do
-      IO.puts("Listing tasks with status: #{list_choice}")
-      Enum.filter(tasks, fn task -> task["status"] === list_choice end)
-    end
-
-    if choice_selected === nil, do: IO.puts("Invalid choice")
 
     if list_choice === "", do: tasks
+
+    unless list_choice === "" do
+      choice_selected = Enum.find(available_list_choices, fn x -> x == list_choice end)
+
+      if choice_selected === nil, do: IO.puts("Invalid choice")
+
+      if choice_selected do
+        IO.puts("Listing tasks with status: #{list_choice}")
+        Enum.filter(tasks, fn task -> task["status"] === list_choice end)
+      end
+    end
   end
 
-  defp add_task(task) do
+  def add_task(task) do
     generated_id = generate_id()
 
-    new_task = %{
-      "id" => generated_id,
-      "description" => task,
-      "status" => "todo",
-      "created_at" => DateTime.utc_now(),
-      "updated_at" => DateTime.utc_now()
-    }
+    unless task === "" do
+      new_task = %{
+        "id" => generated_id,
+        "description" => task,
+        "status" => "todo",
+        "created_at" => DateTime.utc_now(),
+        "updated_at" => DateTime.utc_now()
+      }
 
-    is_task_created = store_task(new_task)
+      is_task_created = store_task(new_task)
 
-    if is_task_created, do: IO.puts("Task added successfully with id: #{generated_id}")
-    if is_task_created == nil, do: nil
+      if is_task_created, do: IO.puts("Task added successfully with id: #{generated_id}")
+      if is_task_created == nil, do: nil
+    end
+
+    if task === "", do: IO.puts("Task description cannot be empty")
   end
 
-  defp update_task(task_id, description) do
+  def update_task(task_id, description) do
     tasks = read_tasks()
 
     task_found = Enum.find(tasks, fn task -> task["id"] === String.to_integer(task_id) end)
@@ -74,7 +81,7 @@ defmodule TaskTracker do
     end
   end
 
-  defp delete_task(task_id) do
+  def delete_task(task_id) do
     tasks = read_tasks()
 
     task_selected = Enum.find(tasks, fn task -> task["id"] === String.to_integer(task_id) end)
@@ -88,7 +95,7 @@ defmodule TaskTracker do
     end
   end
 
-  defp update_task_status(task_id, status) do
+  def update_task_status(task_id, status) do
     tasks = read_tasks()
     IO.puts("Updating task with id: #{task_id}")
 
@@ -112,11 +119,15 @@ defmodule TaskTracker do
     :ok
   end
 
-  defp generate_id do
+  def generate_id do
     case File.read("./records.json") do
       {:ok, body} ->
         existing_tasks = Jason.decode!(body)
-        Enum.max_by(existing_tasks, & &1["id"])["id"] + 1
+        if length(existing_tasks) === 0, do: 1
+
+        if length(existing_tasks) !== 0 do
+          Enum.max_by(existing_tasks, & &1["id"])["id"] + 1
+        end
 
       {:error, _reason} ->
         1
