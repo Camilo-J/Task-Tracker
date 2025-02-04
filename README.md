@@ -3,6 +3,8 @@
 TaskTracker is a simple task tracking application that allows users to create, update, and delete tasks. 
 The application is built using Elixir and mix package.
 
+The application was built following the roadmap provided by [roadmap.sh](https://roadmap.sh/). The roadmap for this project can be found [here](https://roadmap.sh/projects/task-tracker).
+
 ## Prerequisites
 - Elixir
 - Mix
